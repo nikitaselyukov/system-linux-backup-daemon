@@ -1,0 +1,10 @@
+[Unit]
+Description=SnapshotD backup timer
+
+[Timer]
+OnUnitActiveSec=15min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

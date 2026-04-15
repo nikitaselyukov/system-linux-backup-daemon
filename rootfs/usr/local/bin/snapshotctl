@@ -1,0 +1,82 @@
+#!/bin/bash
+
+set -euo pipefail
+
+CONF="/etc/snapshotd/snapshotd.conf"
+TIMER="snapshotd.timer"
+SERVICE="snapshotd.service"
+OVERRIDE_DIR="/etc/systemd/system/${TIMER}.d"
+OVERRIDE_FILE="${OVERRIDE_DIR}/override.conf"
+
+print_usage() {
+    cat <<USAGE
+Usage:
+  snapshotctl status
+  snapshotctl enable
+  snapshotctl disable
+  snapshotctl run
+  snapshotctl log
+  snapshotctl set source <absolute_path>
+  snapshotctl set target <absolute_path>
+  snapshotctl set frequency <value>
+USAGE
+}
+
+set_value() {
+    local key="$1"
+    local val="$2"
+
+    sudo mkdir -p "$(dirname "$CONF")"
+    sudo touch "$CONF"
+
+    if sudo grep -q "^${key}=" "$CONF"; then
+        sudo sed -i "s|^${key}=.*|${key}=${val}|" "$CONF"
+    else
+        printf '%s=%s\n' "$key" "$val" | sudo tee -a "$CONF" >/dev/null
+    fi
+
+    if [[ "$key" == "FREQUENCY" ]]; then
+        sudo mkdir -p "$OVERRIDE_DIR"
+        printf '[Timer]\nOnUnitActiveSec=\nOnUnitActiveSec=%s\n' "$val" | sudo tee "$OVERRIDE_FILE" >/dev/null
+    fi
+
+    sudo systemctl daemon-reload
+    sudo systemctl restart "$TIMER"
+    echo "snapshotctl: ${key} updated to '${val}'"
+}
+
+case "${1:-}" in
+    set)
+        [[ $# -eq 3 ]] || { print_usage; exit 1; }
+        case "$2" in
+            source) set_value "SOURCE" "$3" ;;
+            target) set_value "TARGET" "$3" ;;
+            frequency) set_value "FREQUENCY" "$3" ;;
+            *) print_usage; exit 1 ;;
+        esac
+        ;;
+    status)
+        systemctl status "$TIMER" "$SERVICE" --no-pager -n 0
+        echo
+        [[ -f "$CONF" ]] && cat "$CONF" || echo "config not found: $CONF"
+        ;;
+    enable)
+        sudo systemctl enable --now "$TIMER"
+        echo "snapshotctl: timer enabled"
+        ;;
+    disable)
+        sudo systemctl disable --now "$TIMER"
+        echo "snapshotctl: timer disabled"
+        ;;
+    run)
+        sudo systemctl start "$SERVICE"
+        echo "snapshotctl: backup started"
+        ;;
+    log)
+        sudo journalctl -u "$TIMER" -u "$SERVICE" --since "1 hour ago"
+        ;;
+    *)
+        print_usage
+        exit 1
+        ;;
+esac
