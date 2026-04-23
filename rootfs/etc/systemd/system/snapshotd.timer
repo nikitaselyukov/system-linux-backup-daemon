@@ -2,6 +2,7 @@
 Description=SnapshotD backup timer
 
 [Timer]
+OnActiveSec=15min
 OnUnitActiveSec=15min
 AccuracySec=1min
 Persistent=true

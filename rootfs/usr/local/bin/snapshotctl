@@ -37,7 +37,7 @@ set_value() {
 
     if [[ "$key" == "FREQUENCY" ]]; then
         sudo mkdir -p "$OVERRIDE_DIR"
-        printf '[Timer]\nOnUnitActiveSec=\nOnUnitActiveSec=%s\n' "$val" | sudo tee "$OVERRIDE_FILE" >/dev/null
+        printf '[Timer]\nOnActiveSec=\nOnActiveSec=%s\nOnUnitActiveSec=\nOnUnitActiveSec=%s\n' "$val" "$val" | sudo tee "$OVERRIDE_FILE" >/dev/null
     fi
 
     sudo systemctl daemon-reload

@@ -1,6 +1,5 @@
 [Unit]
 Description=SnapshotD backup service
-Wants=snapshotd.timer
 After=local-fs.target
 
 [Service]
